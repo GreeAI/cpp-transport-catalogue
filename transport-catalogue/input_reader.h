@@ -21,6 +21,7 @@ struct CommandDescription {
     std::string description;  // Параметры команды
 };
 
+
 class InputReader {
 public:
     /**
@@ -28,10 +29,13 @@ public:
      */
     void ParseLine(std::string_view line);
 
+    void ParseLenght(std::vector<CommandDescription> commnads, TransportCatalogue& catalogue) const;
+
     /**
      * Наполняет данными транспортный справочник, используя команды из commands_
      */
     void ApplyCommands(TransportCatalogue& catalogue) const;
+
 
 private:
     std::vector<CommandDescription> commands_;

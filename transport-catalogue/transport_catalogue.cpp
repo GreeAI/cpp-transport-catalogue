@@ -2,7 +2,8 @@
 #include "stat_reader.h"
 
 void TransportCatalogue::AddStop(const std::string& name, const detail::Coordinates& coords) {
-    stops_.emplace_back(name, coords);
+    Stop stops = { name, coords };
+    stops_.emplace_back(stops);
     const Stop& stop = stops_.back();
     buses_to_stop_[&stop] = {};
     stopname_.emplace(stop.name, stop);
@@ -39,7 +40,39 @@ const TransportCatalogue::Bus* TransportCatalogue::FindBus(std::string_view name
     return it != busname_.end() ? &it->second : nullptr;
 }
 
-double TransportCatalogue::GetDistance(const TransportCatalogue::Bus& bus) const {
+void TransportCatalogue::AddDistance(const TransportCatalogue::Stop* first, const TransportCatalogue::Stop* last, int distance) {
+    distance_bus_to_stop_[{first, last}] = distance;
+}
+
+int TransportCatalogue::GetDistance(const TransportCatalogue::Stop* first, const TransportCatalogue::Stop* last) const {
+    std::pair<const Stop*, const Stop*> key = { first, last };
+    auto it = distance_bus_to_stop_.find(key);
+
+    if (it != distance_bus_to_stop_.end()) {
+        return it->second;
+    }
+    else {
+        std::pair<const Stop*, const Stop*> rkey = { last, first };
+        auto it = distance_bus_to_stop_.find(rkey);
+        if (it != distance_bus_to_stop_.end()) {
+            return it->second;
+        }
+    }
+    return 0;
+}
+
+int TransportCatalogue::AllDistance(const std::vector<const TransportCatalogue::Stop*>& names) const {
+    if (distance_bus_to_stop_.empty()) {
+        return 0;
+    }
+    int result = 0;
+    for (int i = 0; i < names.size() - 1; ++i) {
+        result += GetDistance(names[i], names[i + 1]);
+    }
+    return result;
+}
+
+double TransportCatalogue::GetGeoDistance(const TransportCatalogue::Bus& bus) const {
     double distance = 0.0;
     if (bus.stops.size() > 1) {
         for (size_t i = 0; i < bus.stops.size() - 1; ++i) {
@@ -60,7 +93,6 @@ std::set<std::string_view> TransportCatalogue::GetUniqueBus(const Stop* name) co
             }
         }
     }
-
     return buss;
 }
 
