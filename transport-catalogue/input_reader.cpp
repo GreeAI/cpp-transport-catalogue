@@ -103,12 +103,36 @@ void InputReader::ParseLine(std::string_view line) {
     }
 }
 
+void InputReader::ParseLenght(std::vector<CommandDescription> commands, TransportCatalogue& catalogue) const {
+    std::string full_str;
+    std::string first;
+    for (const auto& com : commands) {
+        if (com.command == "Stop") {
+            full_str = com.description;
+            first = com.id;
+            std::vector<std::string_view> splited = Split(full_str, ',');
+
+            for (int i = 2; i < splited.size(); ++i) {
+                std::string_view s = splited[i];
+                size_t meter_pos = s.find('m');
+                std::string distance_str{ Trim(s.substr(0, meter_pos)) };
+                int distance = std::stoi(distance_str);
+                std::string_view last = Trim(s.substr(meter_pos + 4));
+                catalogue.AddDistance(catalogue.FindStop(first), catalogue.FindStop(last), distance);
+            }
+        }
+    }
+}
+
+
 void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
     for (const auto& com : commands_) {
         if (com.command == "Stop") {
             catalogue.AddStop(com.id, ParseCoordinates(com.description));
         }
     }
+
+    ParseLenght(commands_, catalogue);
 
     for (const auto& com : commands_) {
         if (com.command == "Bus") {
