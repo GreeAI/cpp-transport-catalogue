@@ -20,7 +20,11 @@ public:
 
     // ќбрабатывает базовые запросы из JSON и заполн€ет переданный каталог транспорта информацией об остановках и маршрутах автобусов
     void FillCatalogue(transport_catalogue::TransportCatalogue& catalogue);
-    map_render::MapRender FillRenderSettings(const json::Dict& request_map) const;
+    void ProcessStopRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
+    void ProcessBusRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
+
+    svg::Color ExtractColor(const json::Node& color_node) const;
+    map_render::RenderSettings FillRenderSettings(const json::Dict& request_map) const;
 
     // ќбрабатывает запросы статистику из предварительно сохраненного массива запросов. »тераци€ выполн€етс€ по каждому запросу, и в зависимости от типа запроса
     void ProcessRequests(const json::Node& stat_requests, RequestHandler& requests) const;
@@ -31,7 +35,7 @@ public:
     const json::Node PrintMap(const json::Dict& request_map, RequestHandler& requests) const;
 
 private:
-    json::Document input_;
+    json::Document input_; 
     json::Node dummy_ = nullptr;
 
     // »звлекает информацию об одной остановке из JSON. 

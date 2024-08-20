@@ -21,18 +21,11 @@ namespace json {
         using runtime_error::runtime_error;
     };
 
-    class Node {
-    public:
-        using Value = std::variant<std::nullptr_t, std::string, int, double, bool, Array, Dict>;
+    using Value = std::variant<std::nullptr_t, std::string, int, double, bool, Array, Dict>;
 
-        Node() = default;
-        Node(std::nullptr_t);
-        Node(std::string value);
-        Node(int value);
-        Node(double value);
-        Node(bool value);
-        Node(Array array);
-        Node(Dict map);
+    class Node : public Value {
+    public:
+        using Value::Value;
 
         bool IsInt() const;
         bool IsDouble() const;
@@ -54,9 +47,6 @@ namespace json {
 
         bool operator==(const Node& rhs) const;
         bool operator!=(const Node& rhs) const;
-
-    private:
-        Value value_;
     };
 
     class Document {
