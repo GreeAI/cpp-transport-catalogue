@@ -6,6 +6,7 @@
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 #include "request_handler.h"
+#include "json_builder.h"
 
 class JsonReader {
 public:
@@ -24,7 +25,7 @@ public:
     void ProcessBusRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
 
     svg::Color ExtractColor(const json::Node& color_node) const;
-    map_render::RenderSettings FillRenderSettings(const json::Dict& request_map) const;
+    map_render::MapRender FillRenderSettings(const json::Dict& request_map) const;
 
     // Обрабатывает запросы статистику из предварительно сохраненного массива запросов. Итерация выполняется по каждому запросу, и в зависимости от типа запроса
     void ProcessRequests(const json::Node& stat_requests, RequestHandler& requests) const;
