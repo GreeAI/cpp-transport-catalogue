@@ -36,6 +36,7 @@ public:
     int AllDistance(const Stop* from, const Stop* to) const;
     size_t GetUniqueStops(std::string_view bus) const;
     const std::map<std::string_view, const Bus*> GetSortedAllBuses() const;
+    const std::map<std::string_view, const Stop*> GetSortedAllStops() const;
     std::optional<transport_catalogue::BusStat> GetBusStat(const std::string_view& bus_number) const;
 
 private:

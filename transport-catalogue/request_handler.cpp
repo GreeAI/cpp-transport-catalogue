@@ -47,3 +47,10 @@ bool RequestHandler::IsStop(const std::string_view stop) const {
 svg::Document RequestHandler::RenderMap() const {
     return render_.GetSVG(catalogue_.GetSortedAllBuses());
 }
+
+const std::optional<graph::Router<double>::RouteInfo> RequestHandler::GetRouter(const std::string_view from, const std::string_view to) const {
+    return router_.FindRoute(from, to);
+}
+const graph::DirectedWeightedGraph<double>& RequestHandler::GetGraph() const {
+    return router_.GetGraph();
+}

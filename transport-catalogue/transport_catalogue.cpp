@@ -47,9 +47,12 @@ size_t TransportCatalogue::GetUniqueStops(std::string_view bus) const {
 }
 const std::map<std::string_view, const Bus*> TransportCatalogue::GetSortedAllBuses() const {
     std::map<std::string_view, const Bus*> result;
-    for (const auto& bus : busname_) {
-        result.emplace(bus);
-    }
+    for (const auto& bus : busname_) result.emplace(bus);
+    return result;
+}
+const std::map<std::string_view, const Stop*> TransportCatalogue::GetSortedAllStops() const {
+    std::map<std::string_view, const Stop*> result;
+    for (const auto& stop : stopname_) result.emplace(stop);
     return result;
 }
 std::optional<transport_catalogue::BusStat> TransportCatalogue::GetBusStat(const std::string_view& bus_number) const {

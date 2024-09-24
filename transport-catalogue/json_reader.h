@@ -18,14 +18,16 @@ public:
     // Возвращает узел JSON, содержащий статистические запросы
     const json::Node& GetStatRequests() const;
     const json::Node& GetRenderSettings() const;
+    const json::Node& GetRoutingSettings() const;
 
     // Обрабатывает базовые запросы из JSON и заполняет переданный каталог транспорта информацией об остановках и маршрутах автобусов
     void FillCatalogue(transport_catalogue::TransportCatalogue& catalogue);
+    transport::Router FillRoutingSettings(const json::Node& settings) const;
     void ProcessStopRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
     void ProcessBusRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
 
     svg::Color ExtractColor(const json::Node& color_node) const;
-    map_render::MapRender FillRenderSettings(const json::Dict& request_map) const;
+    map_render::MapRender FillRenderSettings(const json::Node& settings) const;
 
     // Обрабатывает запросы статистику из предварительно сохраненного массива запросов. Итерация выполняется по каждому запросу, и в зависимости от типа запроса
     void ProcessRequests(const json::Node& stat_requests, RequestHandler& requests) const;
@@ -34,6 +36,7 @@ public:
     // Функция обрабатывает запрос статистики для конкретной остановки. Если остановка найдена в каталоге, выводит перечень автобусов, проходящих через эту остановку
     const json::Node PrintStop(const json::Dict& request_map, RequestHandler& requests) const;
     const json::Node PrintMap(const json::Dict& request_map, RequestHandler& requests) const;
+    const json::Node PrintRouting(const json::Dict& request_map, RequestHandler& rh) const;
 
 private:
     json::Document input_; 
