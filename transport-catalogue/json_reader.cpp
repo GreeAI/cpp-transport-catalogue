@@ -107,9 +107,12 @@ map_render::MapRender JsonReader::FillRenderSettings(const json::Node& settings)
     return render_settings;
 }
 
-transport::Router JsonReader::FillRoutingSettings(const json::Node& settings) const {
-    transport::Router routing_settings;
-    return transport::Router{ settings.AsDict().at("bus_wait_time").AsInt(), settings.AsDict().at("bus_velocity").AsDouble() };
+transport::RoutingSettings JsonReader::FillRoutingSettings(const json::Node& settings) const {
+    transport::RoutingSettings router_settings;
+    const json::Dict& obj = settings.AsDict();
+    router_settings.bus_velocity = obj.at("bus_velocity").AsDouble();
+    router_settings.bus_wait_time = obj.at("bus_wait_time").AsInt();
+    return router_settings;
 }
 
 void JsonReader::ProcessRequests(const json::Node& stat_requests, RequestHandler& requests) const {
@@ -206,62 +209,52 @@ const json::Node JsonReader::PrintMap(const json::Dict& request_map, RequestHand
 
     return result;
 }
-
 const json::Node JsonReader::PrintRouting(const json::Dict& request_map, RequestHandler& rh) const {
-    using namespace std::literals;
+    const auto& routing = rh.GetRouter(request_map.at("from").AsString(), request_map.at("to").AsString());
+    const int id = request_map.at("id").AsInt();
     json::Node result;
-    const int id = request_map.at("id"s).AsInt();
-    const std::string_view stop_from = request_map.at("from"s).AsString();
-    const std::string_view stop_to = request_map.at("to"s).AsString();
-    const auto& routing = rh.GetRouter(stop_from, stop_to);
-
     if (!routing) {
-        result = json::Builder{}
+        return result = json::Builder{}
             .StartDict()
-            .Key("request_id"s).Value(id)
-            .Key("error_message"s).Value("not found"s)
+            .Key("request_id").Value(id)
+            .Key("error_message").Value("not found")
             .EndDict()
             .Build();
     }
-    else {
-        json::Array items;
-        double total_time = 0.0;
-        items.reserve(routing.value().edges.size());
-        for (auto& edge_id : routing.value().edges) {
-            const graph::Edge<double> edge = rh.GetGraph().GetEdge(edge_id);
-            if (edge.quality == 0) {
+    json::Array items;
+    for (auto& edge_id : routing->edge_info) {
+        std::visit([&items](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+
+            if constexpr (std::is_same_v<T, transport::WaitInfo>) {
                 items.emplace_back(json::Node(json::Builder{}
                     .StartDict()
-                    .Key("stop_name"s).Value(edge.name)
-                    .Key("time"s).Value(edge.weight)
-                    .Key("type"s).Value("Wait"s)
+                    .Key("stop_name").Value(std::string(arg.name))
+                    .Key("time").Value(arg.time)
+                    .Key("type").Value("Wait")
                     .EndDict()
                     .Build()));
-
-                total_time += edge.weight;
             }
-            else {
+            else if constexpr (std::is_same_v<T, transport::BusInfo>) {
                 items.emplace_back(json::Node(json::Builder{}
                     .StartDict()
-                    .Key("bus"s).Value(edge.name)
-                    .Key("span_count"s).Value(static_cast<int>(edge.quality))
-                    .Key("time"s).Value(edge.weight)
-                    .Key("type"s).Value("Bus"s)
+                    .Key("bus").Value(std::string(arg.name))
+                    .Key("span_count").Value(static_cast<int>(arg.span_count))
+                    .Key("time").Value(arg.time)
+                    .Key("type").Value("Bus")
                     .EndDict()
                     .Build()));
-
-                total_time += edge.weight;
             }
-        }
+        }, edge_id);
+    }
 
         result = json::Builder{}
             .StartDict()
-            .Key("request_id"s).Value(id)
-            .Key("total_time"s).Value(total_time)
-            .Key("items"s).Value(items)
+            .Key("request_id").Value(request_map.at("id").AsInt())
+            .Key("total_time").Value(routing->time)
+            .Key("items").Value(items)
             .EndDict()
             .Build();
-    }
 
     return result;
 }

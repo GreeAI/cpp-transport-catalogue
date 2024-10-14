@@ -2,72 +2,68 @@
 
 namespace transport {
 
-    const graph::DirectedWeightedGraph<double>& Router::BuildGraph(const transport_catalogue::TransportCatalogue& catalogue) {
-        const auto& all_stops = catalogue.GetSortedAllStops();
-        const auto& all_buses = catalogue.GetSortedAllBuses();
+    void Router::BuildGraph(const transport_catalogue::TransportCatalogue& catalogue) {
+        const auto& all_stops = catalogue.GetStops();
         graph::DirectedWeightedGraph<double> stops_graph(all_stops.size() * 2);
-        std::map<std::string, graph::VertexId> stop_ids;
-        graph::VertexId vertex_id = 0;
-
-        for (const auto& [stop_name, stop_info] : all_stops) {
-            stop_ids[stop_info->name] = vertex_id;
-            stops_graph.AddEdge({
-                    stop_info->name,
-                    0,
-                    vertex_id,
-                    ++vertex_id,
-                    static_cast<double>(bus_wait_time_)
-                });
-            ++vertex_id;
-        }
-        stop_ids_ = std::move(stop_ids);
-
-        for_each(
-            all_buses.begin(),
-            all_buses.end(),
-            [&stops_graph, this, &catalogue](const auto& item) {
-                const auto& bus_info = item.second;
-                const auto& stops = bus_info->stops;
-                size_t stops_count = stops.size();
-                for (size_t i = 0; i < stops_count; ++i) {
-                    for (size_t j = i + 1; j < stops_count; ++j) {
-                        const transport_catalogue::Stop* stop_from = stops[i];
-                        const transport_catalogue::Stop* stop_to = stops[j];
-                        int dist_sum = 0;
-                        int dist_sum_inverse = 0;
-                        for (size_t k = i + 1; k <= j; ++k) {
-                            dist_sum += catalogue.AllDistance(stops[k - 1], stops[k]);
-                            dist_sum_inverse += catalogue.AllDistance(stops[k], stops[k - 1]);
-                        }
-                        stops_graph.AddEdge({ bus_info->name,
-                                              j - i,
-                                              stop_ids_.at(stop_from->name) + 1,
-                                              stop_ids_.at(stop_to->name),
-                                              static_cast<double>(dist_sum) / (bus_velocity_ * (100.0 / 6.0)) });
-
-                        if (!bus_info->circular_route) {
-                            stops_graph.AddEdge({ bus_info->name,
-                                                  j - i,
-                                                  stop_ids_.at(stop_to->name) + 1,
-                                                  stop_ids_.at(stop_from->name),
-                                                  static_cast<double>(dist_sum_inverse) / (bus_velocity_ * (100.0 / 6.0)) });
-                        }
-                    }
-                }
-            });
-
         graph_ = std::move(stops_graph);
+
+        size_t i = 0;
+        for (const auto stop : all_stops) {
+            graph::VertexId first_id = i++;
+            graph::VertexId second_id = i++;
+            stop_ids_[stop->name] = StopIdVertex{ first_id, second_id };
+        }
+        for (const auto [stop_ptr, ids] : stop_ids_) {
+            graph::EdgeId id = graph_.AddEdge(graph::Edge<double>{
+                ids.begin, ids.end, static_cast<double>(settings_.bus_wait_time)});
+            edges_info_[id] = WaitInfo{ stop_ptr, static_cast<double>(settings_.bus_wait_time) };
+        }
+
+        const auto& all_buses = catalogue.GetBuses();
+        for (const auto& bus : all_buses) {
+            auto stops = bus->stops;
+            if (!bus->circular_route) {
+                for (auto it = bus->stops.rbegin() + 1; it != bus->stops.rend(); ++it) {
+                    stops.push_back(*it);
+                }
+            }
+            for (size_t from = 0; from < stops.size() - 1; ++from) {
+                int distance = 0;
+                for (size_t to = from + 1; to < stops.size(); ++to) {
+                    if (stops[from] == stops[to]) {
+                        continue;
+                    }
+
+                    int span_count = static_cast<int>(to - from);
+
+                    distance += catalogue.AllDistance(stops[to - 1], stops[to]);
+                    double weight = static_cast<double>(distance) / (settings_.bus_velocity * 1000 / 60);
+
+                    const transport_catalogue::Stop* stop_from = stops[from];
+                    const transport_catalogue::Stop* stop_to = stops[to];
+                    graph::EdgeId edge_id = graph_.AddEdge(graph::Edge<double>{stop_ids_.at(stop_from->name).end, stop_ids_.at(stop_to->name).begin, weight});
+                    edges_info_.emplace(edge_id, BusInfo{bus->name, span_count, weight });
+                }
+            }
+        }
         router_ = std::make_unique<graph::Router<double>>(graph_);
-
-        return graph_;
     }
 
-    const std::optional<graph::Router<double>::RouteInfo> Router::FindRoute(const std::string_view stop_from, const std::string_view stop_to) const {
-        return router_->BuildRoute(stop_ids_.at(std::string(stop_from)), stop_ids_.at(std::string(stop_to)));
+    const std::variant<WaitInfo, BusInfo>& Router::GetEdgesInfo(graph::EdgeId edge_id) const {
+        return edges_info_.at(edge_id);
     }
 
-    const graph::DirectedWeightedGraph<double>& Router::GetGraph() const {
-        return graph_;
-    }
+    std::optional<RouteInfo> Router::GetRoute(const std::string_view from, const std::string_view to) const {
+        auto route = router_->BuildRoute(stop_ids_.at(from).begin, stop_ids_.at(to).begin);
+        if (!route) {
+            return std::nullopt;
+        }
+        RouteInfo route_info;
+        route_info.time = route->weight;
+        for (const auto& edge_id : route->edges) {
+            route_info.edge_info.push_back(GetEdgesInfo(edge_id));
+        }
 
+        return route_info;
+    }
 }

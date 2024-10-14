@@ -22,9 +22,8 @@ public:
     // Чтобы найти автобус и остановку в json_reader
     bool IsBus(const std::string_view bus) const;
     bool IsStop(const std::string_view stop) const;
+    const std::optional<transport::RouteInfo> GetRouter(std::string_view from_name, std::string_view to_name) const;
 
-    const std::optional<graph::Router<double>::RouteInfo> GetRouter(const std::string_view from, const std::string_view to) const;
-    const graph::DirectedWeightedGraph<double>& GetGraph() const;
 
     svg::Document RenderMap() const;
 

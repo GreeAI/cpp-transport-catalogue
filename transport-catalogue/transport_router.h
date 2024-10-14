@@ -3,35 +3,59 @@
 #include "router.h"
 #include "transport_catalogue.h"
 
+#include <variant>
 #include <memory>
 
 namespace transport {
 
-	class Router {
-	public:
-		Router() = default;
+    struct RoutingSettings {
+        int bus_wait_time = 1;
+        double bus_velocity = 1.;
+    };
 
-		Router(const int bus_wait_time, const double bus_velocity)
-			: bus_wait_time_(bus_wait_time)
-			, bus_velocity_(bus_velocity) {}
+    struct WaitInfo {
+        std::string_view name;
+        double time;
+    };
 
-		Router(const Router& settings, const transport_catalogue::TransportCatalogue& catalogue) {
-			bus_wait_time_ = settings.bus_wait_time_;
-			bus_velocity_ = settings.bus_velocity_;
-			BuildGraph(catalogue);
-		}
+    struct BusInfo {
+        std::string_view name;
+        int span_count;
+        double time;
+    };
+    struct StopIdVertex {
+        graph::VertexId begin;
+        graph::VertexId end;
+    };
+    struct RouteInfo {
+        double time = 0.;
+        std::vector < std::variant<WaitInfo, BusInfo>> edge_info;
+    };
 
-		const graph::DirectedWeightedGraph<double>& BuildGraph(const transport_catalogue::TransportCatalogue& catalogue);
-		const std::optional<graph::Router<double>::RouteInfo> FindRoute(const std::string_view stop_from, const std::string_view stop_to) const;
-		const graph::DirectedWeightedGraph<double>& GetGraph() const;
 
-	private:
-		int bus_wait_time_ = 0;
-		double bus_velocity_ = 0.0;
+    class Router {
+    public:
 
-		graph::DirectedWeightedGraph<double> graph_;
-		std::map<std::string, graph::VertexId> stop_ids_;
-		std::unique_ptr<graph::Router<double>> router_;
-	};
+        static constexpr double Coefficient = (100.0 / 6.0);
 
+        Router() = default;
+        Router(const RoutingSettings& settings, const transport_catalogue::TransportCatalogue& catalogue)
+            :catalogue_(catalogue),
+             settings_(settings) {
+            BuildGraph(catalogue);
+        }
+
+
+        std::optional<RouteInfo> GetRoute(const std::string_view from, const std::string_view to) const;
+        void BuildGraph(const transport_catalogue::TransportCatalogue& catalogue);
+        const std::variant<WaitInfo, BusInfo>& GetEdgesInfo(graph::EdgeId edge_id) const;
+
+    private:
+        const transport_catalogue::TransportCatalogue& catalogue_;
+        const RoutingSettings settings_;
+        std::unique_ptr<graph::Router<double>> router_;
+        std::map<std::string_view, StopIdVertex> stop_ids_;
+        std::unordered_map<graph::EdgeId, std::variant<WaitInfo, BusInfo>> edges_info_;
+        graph::DirectedWeightedGraph<double> graph_;
+    };
 }

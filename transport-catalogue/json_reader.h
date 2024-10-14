@@ -8,6 +8,7 @@
 #include "request_handler.h"
 #include "json_builder.h"
 
+
 class JsonReader {
 public:
     JsonReader(std::istream& input)
@@ -22,7 +23,7 @@ public:
 
     // Обрабатывает базовые запросы из JSON и заполняет переданный каталог транспорта информацией об остановках и маршрутах автобусов
     void FillCatalogue(transport_catalogue::TransportCatalogue& catalogue);
-    transport::Router FillRoutingSettings(const json::Node& settings) const;
+    transport::RoutingSettings FillRoutingSettings(const json::Node& settings) const;
     void ProcessStopRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
     void ProcessBusRequests(const json::Array& arr, transport_catalogue::TransportCatalogue& catalogue);
 
@@ -39,8 +40,9 @@ public:
     const json::Node PrintRouting(const json::Dict& request_map, RequestHandler& rh) const;
 
 private:
-    json::Document input_; 
+    json::Document input_;
     json::Node dummy_ = nullptr;
+    std::vector<const json::Node*> routing_settings_;
 
     // Извлекает информацию об одной остановке из JSON. 
     // Возвращает кортеж, содержащий название остановки, её координаты и расстояния до других остановок.

@@ -38,6 +38,8 @@ public:
     const std::map<std::string_view, const Bus*> GetSortedAllBuses() const;
     const std::map<std::string_view, const Stop*> GetSortedAllStops() const;
     std::optional<transport_catalogue::BusStat> GetBusStat(const std::string_view& bus_number) const;
+    std::vector<const Stop*> GetStops() const;
+    std::vector<const Bus*> GetBuses() const;
 
 private:
     using DistanceContainer = std::unordered_map<std::pair<const Stop*, const Stop*>, int, DistanceHasher>;

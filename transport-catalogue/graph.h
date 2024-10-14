@@ -4,7 +4,6 @@
 
 #include <cstdlib>
 #include <vector>
-#include <string>
 
 namespace graph {
 
@@ -13,8 +12,6 @@ namespace graph {
 
     template <typename Weight>
     struct Edge {
-        std::string name;
-        size_t quality;
         VertexId from;
         VertexId to;
         Weight weight;
@@ -74,5 +71,4 @@ namespace graph {
         DirectedWeightedGraph<Weight>::GetIncidentEdges(VertexId vertex) const {
         return ranges::AsRange(incidence_lists_.at(vertex));
     }
-
-} // namespace graph
+}  // namespace graph

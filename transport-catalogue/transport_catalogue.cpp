@@ -87,4 +87,22 @@ std::optional<transport_catalogue::BusStat> TransportCatalogue::GetBusStat(const
 
     return bus_stat;
 }
+
+std::vector<const Stop*> TransportCatalogue::GetStops() const {
+    std::vector<const Stop*> result;
+    result.reserve(buses_.size());
+    for (const Stop& stop : stops_) {
+        result.push_back(&stop);
+    }
+    return result;
+}
+
+std::vector<const Bus*> TransportCatalogue::GetBuses() const {
+    std::vector<const Bus*> result;
+    result.reserve(buses_.size());
+    for (const Bus& bus : buses_) {
+        result.push_back(&bus);
+    }
+    return result;
+}
 }//transport_catalogue
